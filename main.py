@@ -18,12 +18,10 @@ BACKTEST_LOG = "backtest_log.txt"
 
 app = FastAPI()
 
-# Root check page (for browser test)
 @app.get("/")
 def read_root():
     return {"status": "OK", "message": "The bot is running"}
 
-# Binance API request helper
 def binance_futures_request(method, endpoint, params):
     url = f"https://fapi.binance.com{endpoint}"
     params["timestamp"] = int(time.time() * 1000)
@@ -36,7 +34,6 @@ def binance_futures_request(method, endpoint, params):
     else:
         return httpx.post(url, params=params, headers=headers).json()
 
-# Get Futures Balance
 def get_futures_balance():
     data = binance_futures_request("GET", "/fapi/v2/balance", {})
     for asset in data:
@@ -44,7 +41,6 @@ def get_futures_balance():
             return float(asset["availableBalance"])
     return 0
 
-# Place market order
 def place_order(side, quantity):
     params = {
         "symbol": "SOLUSDT",
@@ -54,7 +50,6 @@ def place_order(side, quantity):
     }
     return binance_futures_request("POST", "/fapi/v1/order", params)
 
-# Set leverage
 def set_leverage(leverage):
     params = {
         "symbol": "SOLUSDT",
@@ -62,7 +57,6 @@ def set_leverage(leverage):
     }
     return binance_futures_request("POST", "/fapi/v1/leverage", params)
 
-# Place Take-Profit and Stop-Loss Orders
 def place_tp_sl(side, entry_price, quantity):
     tp_price = round(entry_price * 1.5, 2)
     sl_price = round(entry_price * 0.5, 2)
@@ -88,18 +82,15 @@ def place_tp_sl(side, entry_price, quantity):
     }
     binance_futures_request("POST", "/fapi/v1/order", sl_params)
 
-# Telegram Alert
 def send_telegram(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message}
     httpx.post(url, json=payload)
 
-# Log Backtest
 def log_backtest(details):
     with open(BACKTEST_LOG, "a") as f:
         f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - {details}\n")
 
-# Webhook Endpoint for TradingView
 @app.post("/webhook")
 async def webhook(request: Request):
     data = await request.json()
@@ -125,7 +116,6 @@ async def webhook(request: Request):
         )
         send_telegram(message)
 
-        # Auto-Backtest Logging
         log_details = f"SIDE={side}, ENTRY={entry_price}, QTY={quantity}, TP={round(entry_price * 1.5, 2)}, SL={round(entry_price * 0.5, 2)}"
         log_backtest(log_details)
 
